@@ -42,10 +42,35 @@ search_nsf_award_api <- function(..., maxResults = 500, fields = NA) {
     if (nrow(this_results) < 25) break
   }
 
+  Sys.sleep(2)
+
   results 
 }
 
-outputs <- "id,awdSpAttnCode,title,awardee,startDate,expDate"
+
+# if you already know your award_ids
+# this goes one award at a time so it'll be a lot slower than using the search function
+get_nsf_award_api <- function(award_ids) {
+
+  results <- NULL
+
+  for (i in award_ids) {
+
+    url <- paste0("https://www.research.gov/awardapi-service/v1/awards/",i,".json")
+
+    this_results <- jsonlite::fromJSON(URLencode(url))
+
+    this_results <- as.data.frame(this_results$response$award)
+
+    results <- dplyr::bind_rows(results,this_results)
+  }
+
+  Sys.sleep(2)
+
+  results 
+}
+
+outputs <- "id,awdSpAttnCode,title,awardee,startDate,expDate,fundsObligated,fundsObligatedAmt"
 
 # Since awdSpAttnCode is not a searchable parameter, we have to get everything it could possibly be applied to
 # which means every award with an end date after terminations started occuring, the earlist of which is Apr 2025
@@ -63,7 +88,6 @@ results2027_2 <- search_nsf_award_api(expDateStart="07/01/2027",expDateEnd="12/3
 results2028 <- search_nsf_award_api(expDateStart="01/01/2028",expDateEnd="12/31/2028", maxResults = 10000, fields = outputs)
 results2029 <- search_nsf_award_api(expDateStart="01/01/2029",expDateEnd="12/31/2029", maxResults = 10000, fields = outputs)
 results2030 <- search_nsf_award_api(expDateStart="01/01/2030", maxResults = 10000, fields = outputs)
-
 
 all_results <- dplyr::bind_rows(results2025_1, results2025_2, results2026_1, results2026_2, results2026_3,
                           results2027_1, results2027_2, results2028, results2029, results2030) |>
