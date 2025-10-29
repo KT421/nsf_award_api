@@ -82,7 +82,7 @@ usa_spending |>
 # since the awards get those 30 days to drawdown any outstanding expenses and certain closeout costs. But it'll be close enough for a rough estimate.
 # Not all of these terminations have been deobligated yet. How to tell? NSF's public API doesn't give us granular amendment data
 # but it does tell us the last amendment date. If there is an amendment after the one listed on USASpending, we know we have missing data
-# and if it's a terminated award, the only reasonable assumption is that the unlisted amendment is the deob amentment.
+# and if it's a terminated award, the only reasonable assumption is that the unlisted amendment is the deob amendment.
 
 # find amendments associated with terminated awards
 
@@ -115,13 +115,14 @@ termed_amd2 <- termed_amd |>
 
 termations_with_missing_amd <- termed_amd2 |>
   filter(!most_recent) |>
-  mutate(estimated_deob = total_obligated_amount - total_outlayed_amount_for_overall_award)
+  mutate(estimated_deob = total_obligated_amount - fundsObligatedAmt) 
+# estimate the Deob as what USASpending thinks the total obligation is minus what NSF thinks the total obligation is
 
 sum(termed_deob_amendments$federal_action_obligation)
 # 47 million in deobligations documented on USASpending
 
 sum(termations_with_missing_amd$estimated_deob, na.rm = T)
-# 15 million in estimated undocumented deobligations
+# 16 million in estimated undocumented deobligations
 # have no way to validate this but proportionally it seems reasonable
 
 #############################
