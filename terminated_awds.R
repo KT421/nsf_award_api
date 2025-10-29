@@ -46,8 +46,10 @@ FY25_totals <- usa_spending |>
           total = sum(federal_action_obligation)) |>
   mutate(total = scales::dollar(total))
 
+# function to set transactions to just MM/YY for ease of grouping
+# can't JUST use month because FY starts in October
 yearmonth <- function(date_string) {
-  paste0(year(date_string),"-",month(date_string, label = TRUE, abbr = TRUE),"-01") |> ymd()
+  paste0(year(date_string),"-",month(date_string),"-01") |> ymd()
 }
 
 FY25_monthly_totals <- usa_spending |> 
