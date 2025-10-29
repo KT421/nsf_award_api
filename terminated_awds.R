@@ -78,11 +78,10 @@ usa_spending |>
 # termination date, followed by a deobligation amendment of any remaining funds a month or two later, when the award is Financially Closed
 
 # the non-EDU terminations have the $0 amendment but not the deob amendment in USASpending. Until that data catches up or the ETL is fixed,
-# we cannot see the deob amount, although we can estimate it as total obligation minus total outlays. This will be an overestimate
-# since the awards get those 30 days to drawdown any outstanding expenses and certain closeout costs. But it'll be close enough for a rough estimate.
-# Not all of these terminations have been deobligated yet. How to tell? NSF's public API doesn't give us granular amendment data
-# but it does tell us the last amendment date. If there is an amendment after the one listed on USASpending, we know we have missing data
-# and if it's a terminated award, the only reasonable assumption is that the unlisted amendment is the deob amendment.
+# we cannot see the deob amount, although we can estimate it as what USASpending thinks the total obligation is (before the deob) less what NSF
+# thinks the deob is (after the deob). But not all of these terminations have been deobligated yet. How to tell which? NSF's public API doesn't 
+# give us granular amendment data but it does tell us the last amendment date. If there is an amendment after the one listed on USASpending, 
+# we know we have missing data and if it's a terminated award, the only reasonable assumption is that the unlisted amendment is the deob amendment.
 
 # find amendments associated with terminated awards
 
