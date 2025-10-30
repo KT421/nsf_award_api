@@ -7,10 +7,10 @@ library(tidyverse)
 #' This function is a wrapper for the public facing award API
 #' 
 #' NSF public facing award database API is described here: https://resources.research.gov/common/webapi/awardapisearch-v1.htm
+#' 
+#' Returns a maximum of 10000 results at once, which is the API max. If you need more, you need to chunk your query somehow
 #'
 #' @param ... Desired search parameters as described in the API spec
-#' @param maxResults Number of results to return. API max is 10000 
-#' @param fields Fields to return, string separated by comma. Leave as NA to get the default set marked in the API spec
 #'
 #' @returns dataframe of results from API
 #'
@@ -20,15 +20,13 @@ library(tidyverse)
 #' search_nsf_award_api(keyword = "water",
 #'                      awardeeStateCode = "TX")
 #' }
-search_nsf_award_api <- function(..., maxResults = 500, fields = NA) {
+search_nsf_award_api <- function(...) {
   
   params <- paste(names(list(...)), list(...), collapse = "&", sep = "=")
 
-  printfields <- ifelse(!is.na(fields),paste0("&printFields=",fields),NA)
+  offset <- seq(from = 0, to = 7500, by = 2500)
 
-  offset <- seq(from = 0, to = maxResults-1, by = 25)
-
-  urls <- paste0("https://www.research.gov/awardapi-service/v1/awards.json?",params,"&offset=",offset,printfields)
+  urls <- paste0("https://www.research.gov/awardapi-service/v1/awards.json?",params,"&offset=",offset,"&rpp=2500")
 
   results <- NULL
 
@@ -39,7 +37,10 @@ search_nsf_award_api <- function(..., maxResults = 500, fields = NA) {
 
     results <- dplyr::bind_rows(results,this_results)
 
-    if (nrow(this_results) < 25) break
+    if (nrow(this_results) < 2500) break
+    if (this_results$response$metadata$totalCount == 7500 && this_results$response$metadata$totalCount == 10000) {
+      warning {"API Max of 10,000 results reached."}
+    }
   }
 
   Sys.sleep(2)
@@ -49,16 +50,20 @@ search_nsf_award_api <- function(..., maxResults = 500, fields = NA) {
 
 
 # if you already know your award_ids
-# this goes one award at a time so it'll be a lot slower than using the search function
+# does 25 awd_ids at a time
 get_nsf_award_api <- function(award_ids) {
 
   results <- NULL
 
-  for (i in award_ids) {
+  awd_ids <- split(award_ids, ceiling(seq_along(award_ids)/25)) 
 
-    url <- paste0("https://www.research.gov/awardapi-service/v1/awards/",i,".json")
+  awd_ids <- map(awd_ids, ~ paste0(.x, collapse = ","))
 
-    this_results <- jsonlite::fromJSON(URLencode(url))
+  urls <- paste0("https://www.research.gov/awardapi-service/v1/awards/",awd_ids,".json")
+
+  for (i in urls) {
+
+    this_results <- jsonlite::fromJSON(URLencode(i))
 
     this_results <- as.data.frame(this_results$response$award)
 
@@ -70,24 +75,22 @@ get_nsf_award_api <- function(award_ids) {
   results 
 }
 
-outputs <- "id,awdSpAttnCode,title,awardee,startDate,expDate,fundsObligated,fundsObligatedAmt"
-
 # Since awdSpAttnCode is not a searchable parameter, we have to get everything it could possibly be applied to
 # which means every award with an end date after terminations started occuring, the earlist of which is Apr 2025
 # Brute force; get every award with an end date in 2025 or later
 # chunked by end date because the API only returns 10000 results maximum 
 # MOST of the results will be in 2025 because award that are terminated have their end date changed to the termination date
 # but that change is not automatic and lags some weeks behind the awdSpAttnCode update
-results2025_1 <- search_nsf_award_api(expDateStart="01/01/2025",expDateEnd="06/30/2025", maxResults = 10000, fields = outputs)
-results2025_2 <- search_nsf_award_api(expDateStart="07/01/2025",expDateEnd="12/31/2025", maxResults = 10000, fields = outputs)
-results2026_1 <- search_nsf_award_api(expDateStart="01/01/2026",expDateEnd="06/30/2026", maxResults = 10000, fields = outputs)
-results2026_2 <- search_nsf_award_api(expDateStart="07/01/2026",expDateEnd="08/31/2026", maxResults = 10000, fields = outputs)
-results2026_3 <- search_nsf_award_api(expDateStart="09/01/2026",expDateEnd="12/31/2026", maxResults = 10000, fields = outputs)
-results2027_1 <- search_nsf_award_api(expDateStart="01/01/2027",expDateEnd="06/30/2027", maxResults = 10000, fields = outputs)
-results2027_2 <- search_nsf_award_api(expDateStart="07/01/2027",expDateEnd="12/31/2027", maxResults = 10000, fields = outputs)
-results2028 <- search_nsf_award_api(expDateStart="01/01/2028",expDateEnd="12/31/2028", maxResults = 10000, fields = outputs)
-results2029 <- search_nsf_award_api(expDateStart="01/01/2029",expDateEnd="12/31/2029", maxResults = 10000, fields = outputs)
-results2030 <- search_nsf_award_api(expDateStart="01/01/2030", maxResults = 10000, fields = outputs)
+results2025_1 <- search_nsf_award_api(expDateStart="01/01/2025",expDateEnd="06/30/2025")
+results2025_2 <- search_nsf_award_api(expDateStart="07/01/2025",expDateEnd="12/31/2025")
+results2026_1 <- search_nsf_award_api(expDateStart="01/01/2026",expDateEnd="06/30/2026")
+results2026_2 <- search_nsf_award_api(expDateStart="07/01/2026",expDateEnd="08/31/2026")
+results2026_3 <- search_nsf_award_api(expDateStart="09/01/2026",expDateEnd="12/31/2026")
+results2027_1 <- search_nsf_award_api(expDateStart="01/01/2027",expDateEnd="06/30/2027")
+results2027_2 <- search_nsf_award_api(expDateStart="07/01/2027",expDateEnd="12/31/2027")
+results2028 <- search_nsf_award_api(expDateStart="01/01/2028",expDateEnd="12/31/2028")
+results2029 <- search_nsf_award_api(expDateStart="01/01/2029",expDateEnd="12/31/2029")
+results2030 <- search_nsf_award_api(expDateStart="01/01/2030")
 
 all_results <- dplyr::bind_rows(results2025_1, results2025_2, results2026_1, results2026_2, results2026_3,
                           results2027_1, results2027_2, results2028, results2029, results2030) |>
