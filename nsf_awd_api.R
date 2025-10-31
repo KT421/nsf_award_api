@@ -30,20 +30,17 @@ search_nsf_award_api <- function(...) {
 
   results <- NULL
 
-  for (i in 1:length(offset)) {
-    this_results <- jsonlite::fromJSON(URLencode(urls[i]))
+  for (i in urls) {
+    this_results <- jsonlite::fromJSON(URLencode(i))
 
     this_results <- as.data.frame(this_results$response$award)
 
     results <- dplyr::bind_rows(results,this_results)
 
     if (nrow(this_results) < 2500) break
-    if (this_results$response$metadata$totalCount == 7500 && this_results$response$metadata$totalCount == 10000) {
-      warning {"API Max of 10,000 results reached."}
     }
-  }
 
-  Sys.sleep(2)
+  if (nrow(results) == 10000) warning("API Max of 10,000 results reached.")
 
   results 
 }
@@ -68,20 +65,26 @@ get_nsf_award_api <- function(award_ids) {
     this_results <- as.data.frame(this_results$response$award)
 
     results <- dplyr::bind_rows(results,this_results)
-  }
 
-  Sys.sleep(2)
+    Sys.sleep(2)  
+  }
 
   results 
 }
 
-# Since awdSpAttnCode is not a searchable parameter, we have to get everything it could possibly be applied to
+###########################
+
+# Sample ~~use~~ abuse of the API: Identifying terminated grants, the hard way
+# (the easy way is to use grant-witness.us)
+
+# Terminated Grants are identified by awdSpAttnCode == 37
+# Since awdSpAttnCode is not a searchable parameter, we have to get everything it could possibly be applied to,
 # which means every award with an end date after terminations started occuring, the earlist of which is Apr 2025
 # Brute force; get every award with an end date in 2025 or later
 # chunked by end date because the API only returns 10000 results maximum 
 # MOST of the results will be in 2025 because award that are terminated have their end date changed to the termination date
 # but that change is not automatic and lags some weeks behind the awdSpAttnCode update
-results2025_1 <- search_nsf_award_api(expDateStart="01/01/2025",expDateEnd="06/30/2025")
+results2025_1 <- search_nsf_award_api(expDateStart="01/01/2025",expDateEnd="12/30/2025")
 results2025_2 <- search_nsf_award_api(expDateStart="07/01/2025",expDateEnd="12/31/2025")
 results2026_1 <- search_nsf_award_api(expDateStart="01/01/2026",expDateEnd="06/30/2026")
 results2026_2 <- search_nsf_award_api(expDateStart="07/01/2026",expDateEnd="08/31/2026")
